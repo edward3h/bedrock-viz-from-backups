@@ -20,6 +20,9 @@ generate_map() {
         if [ -n "$WEB_HOST_TARGET" ]; then
             rsync -az "$output_dir" "${WEB_HOST_TARGET}/"
         fi
+        if [ -n "$MQTT_PUBLISH_TOPIC" ]; then
+            mosquitto_pub -h "$MQTT_SERVER_HOST" -I "${MQTT_CLIENT_ID:-bedrock-viz}" -q 0 -t "$MQTT_PUBLISH_TOPIC" -m "Map generated /$safe_name/index.html"
+        fi
     fi
 }
 
