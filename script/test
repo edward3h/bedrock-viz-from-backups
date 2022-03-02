@@ -8,6 +8,6 @@ mkdir -p "$BUILD/world" "$BUILD/output"
 IMAGE_TAG="bedrock-viz-backups:test"
 docker build --no-cache -t "$IMAGE_TAG" "$PROJECT_PATH" | tee "$BUILD/build.log"
 
-rm -r "$BUILD/world/"*
+rm -rf "$BUILD/world/"*
 unzip "$PROJECT_PATH/sample/bds-test.20220227-131714.mcworld" -d "$BUILD/world"
 docker run --rm -v "$BUILD/world:/sample" -v "$BUILD/output:/output" "$IMAGE_TAG" bedrock-viz --db /sample --out /output --html-all

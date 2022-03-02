@@ -14,7 +14,7 @@ RUN git clone --recursive https://github.com/edward3h/bedrock-viz.git && \
     cmake .. && make install
 
 FROM alpine:3.15
-RUN apk --no-cache add jq=1.6-r1 rsync=3.2.3-r5
+RUN apk --no-cache add jq=1.6-r1 rsync=3.2.3-r5 openssh-client-default=8.8_p1-r1
 COPY --from=builder /usr/local/share/bedrock-viz /usr/local/share/bedrock-viz
 COPY --from=builder /usr/local/bin/bedrock-viz /usr/local/bin/
 COPY --from=builder /usr/bin/mosquitto* /usr/bin/
