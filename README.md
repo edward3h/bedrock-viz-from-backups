@@ -16,6 +16,10 @@ This project creates a docker image which is intended to be used as part of a wi
 * Assume all map generation is done in series, not concurrently.
 * The current implementation assumes that the time taken to generate maps is shorter than the interval between backup messages.
 
+## _Status_
+
+_My simple test setup works, but on my real Minecraft server bedrock-viz crashes. More work required..._
+
 ## Setup
 
 Copy example.env and set environment variables, then use your file in docker.
