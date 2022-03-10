@@ -15,7 +15,7 @@ RUN git clone --recursive https://github.com/bedrock-viz/bedrock-viz.git && \
 
 FROM ubuntu:21.10
 RUN apt-get update && apt-get install --no-install-recommends -y mosquitto-clients=2.0.11-1 \
-    rsync=3.2.3-4ubuntu1 openssh-client=1:8.4p1-6ubuntu2.1 \
+    rsync=3.2.3-4ubuntu1 openssh-client=1:8.4p1-6ubuntu2.1 jq=1.6-2.1ubuntu2 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/share/bedrock-viz /usr/local/share/bedrock-viz
