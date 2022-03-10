@@ -10,10 +10,11 @@ generate_map() {
     echo "Generating map for $filename"
     if [ -f "/backups/$filename" ]; then
         world_dir="/data/worlds/${filename%.zip}"
-        mkdir "$world_dir" || return 1
+        mkdir -p "$world_dir" || return 1
         unzip "/backups/$filename" -d "$world_dir" || return 2
         safe_name=$(sed 's/[^[:alnum:]_]//g' "$world_dir/levelname.txt")
         output_dir="/data/output/$safe_name"
+        rm -rf "$output_dir"
         mkdir -p "$output_dir"
         bedrock-viz --db "$world_dir" --out "$output_dir" --html-all
 
@@ -27,6 +28,13 @@ generate_map() {
 }
 
 echo "Starting..."
+if [ "$USE_SSH" = "true" ]; then
+    # this image does everything as root. That's ok for now.
+    mkdir -p /root/.ssh
+    cp -a /ssh/* /root/.ssh/
+    chown -R root:root /root/.ssh
+fi
+
 mosquitto_sub -h "$MQTT_SERVER_HOST" -I "${MQTT_CLIENT_ID:-bedrock-viz}" -q 0 -t "$MQTT_SUBSCRIBE_TOPIC" |
     jq -r --unbuffered 'select(.type == "BACKUP_COMPLETE") | .filename' |
     while read -r filename; do
