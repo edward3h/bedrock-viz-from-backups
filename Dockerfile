@@ -1,4 +1,4 @@
-FROM ubuntu:21.10 AS builder
+FROM ubuntu:impish-20220531 AS builder
 
 # hadolint ignore=DL3015
 RUN apt-get update && apt-get install -y git=1:2.32.0-1ubuntu1 \
@@ -13,7 +13,7 @@ RUN git clone --recursive https://github.com/bedrock-viz/bedrock-viz.git && \
     mkdir build && cd build && \
     cmake .. && make install
 
-FROM ubuntu:21.10
+FROM ubuntu:impish-20220531
 RUN apt-get update && apt-get install --no-install-recommends -y mosquitto-clients=2.0.11-1 \
     rsync=3.2.3-4ubuntu1 openssh-client=1:8.4p1-6ubuntu2.1 jq=1.6-2.1ubuntu2 unzip=6.0-26ubuntu1 \
  && apt-get clean \
