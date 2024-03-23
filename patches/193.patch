@@ -1,0 +1,444 @@
+From 0640523b3490cc5b7b47e8e612476804cfbeaa01 Mon Sep 17 00:00:00 2001
+From: Tim Nowaczyk <zimage@gmail.com>
+Date: Tue, 18 Jul 2023 19:28:02 -0400
+Subject: [PATCH 1/5] Added HardCodedSpawnAreas logging Added info level
+ logging to print the structure name when the chunk parser finds a chunk with
+ a HardCodedSpawnAreas attribute.
+
+---
+ src/world/world.cc | 27 +++++++++++++++++++++++----
+ 1 file changed, 23 insertions(+), 4 deletions(-)
+
+diff --git a/src/world/world.cc b/src/world/world.cc
+index 6420382..6878633 100644
+--- a/src/world/world.cc
++++ b/src/world/world.cc
+@@ -731,22 +731,41 @@ namespace mcpe_viz
+                     break;
+ 
+                 case 0x36:
+-                    // new for v1.2?
++		    // FinalizedState
+                     log::trace("{} 0x36 chunk (FinalizedState)", dimName);
+                     if (control.verboseFlag) {
+                         printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
+                     }
+-                    // todo - what is this?
+-                    // appears to be a single 4-byte integer?
++		    // From https://cran.r-project.org/web/packages/rbedrock/rbedrock.pdf
++		    // 0 NeedsInstaticking Chunk needs to be ticked
++                    // 1 NeedsPopulation Chunk needs to be populated with mobs
++                    // 2 Done Chunk generation is fully complete
+                     break;
+ 
+                 case 0x39:
+                     // Bounding boxes for structure spawns stored in binary format
+                     log::trace("{} 0x39 chunk (HardCodedSpawnAreas)", dimName);
++		    // Last byte of the cdata maps to the following
++		    // 1: "Fortress", 3: "Monument", 5: "Villager Outpost", 2: "Witch Hut"
++		    switch (*(cdata + cdata_size - 1)) {
++			    case 1:
++                                log::info("{} Found Fortress", dimName);
++				break;
++			    case 2:
++                                log::info("{} Found Witch Hut", dimName);
++				break;
++			    case 3:
++                                log::info("{} Found Ocean Monument", dimName);
++				break;
++			    case 5:
++                                log::info("{} Found Pillager Outpost", dimName);
++				break;
++			    default:
++				log::info("{} Found unknown structure", dimName);
++		    }
+                     if (control.verboseFlag) {
+                         printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
+                     }
+-                    // todo - probably used for outposts and things of that nature
+                     break;
+                 case 0x3a:
+                     // Tick counters - not used
+
+From 71589b06c7270c9423fd1b227c4e283e804e4890 Mon Sep 17 00:00:00 2001
+From: Tim Nowaczyk <zimage@gmail.com>
+Date: Tue, 18 Jul 2023 23:28:32 -0400
+Subject: [PATCH 2/5] Added stubs for 0x3f, 0x40, 0x41, and
+ LevelChunkMetaDataDictionary
+
+---
+ src/world/world.cc | 36 +++++++++++++++++++++++++++++++-----
+ 1 file changed, 31 insertions(+), 5 deletions(-)
+
+diff --git a/src/world/world.cc b/src/world/world.cc
+index 6878633..be381e8 100644
+--- a/src/world/world.cc
++++ b/src/world/world.cc
+@@ -554,6 +554,12 @@ namespace mcpe_viz
+             else if (strncmp(key, "actorprefix", 11) == 0) {
+                 continue;
+             }
++	    else if(strncmp(key, "LevelChunkMetaDataDictionary", 28) == 0) {
++                log::debug("Found LevelChunkMetaDataDictionary");
++                if (control.verboseFlag) {
++                    printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
++                }
++	    }
+             else if (key_size == 9 || key_size == 10 || key_size == 13 || key_size == 14) {
+ 
+                 // these are probably chunk records, we parse the key and determine what we've got
+@@ -715,8 +721,7 @@ namespace mcpe_viz
+ 
+                 case 0x35:
+                     // "BiomeState"
+-                    log::trace("{} 0x35 chunk (BiomeState)",
+-                        dimName);
++                    log::trace("{} 0x35 chunk (BiomeState)", dimName);
+                     if (control.verboseFlag) {
+                         printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
+                     }
+@@ -731,7 +736,7 @@ namespace mcpe_viz
+                     break;
+ 
+                 case 0x36:
+-		    // FinalizedState
++		    // "FinalizedState"
+                     log::trace("{} 0x36 chunk (FinalizedState)", dimName);
+                     if (control.verboseFlag) {
+                         printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
+@@ -743,6 +748,7 @@ namespace mcpe_viz
+                     break;
+ 
+                 case 0x39:
++		    // "HardCodedSpawnAreas"
+                     // Bounding boxes for structure spawns stored in binary format
+                     log::trace("{} 0x39 chunk (HardCodedSpawnAreas)", dimName);
+ 		    // Last byte of the cdata maps to the following
+@@ -761,7 +767,7 @@ namespace mcpe_viz
+                                 log::info("{} Found Pillager Outpost", dimName);
+ 				break;
+ 			    default:
+-				log::info("{} Found unknown structure", dimName);
++				log::error("{} Found unknown structure", dimName);
+ 		    }
+                     if (control.verboseFlag) {
+                         printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
+@@ -773,6 +779,7 @@ namespace mcpe_viz
+                     break;
+                 case 0x3b:
+                     // Appears to be a list of checksums for chunk data. Upcoming in 1.16
++		    // Appears to be no longer written as of 1.18 -- https://minecraft.fandom.com/wiki/Bedrock_Edition_level_format#Chunk_key_format
+                     log::trace("{} 0x3b chunk (checksum?)", dimName);
+                     if (control.verboseFlag) {
+                         printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
+@@ -780,6 +787,25 @@ namespace mcpe_viz
+                     // todo - what is this?
+                     break;
+ 
++		case 0x3f:
++		    // "LevelChunkMetaDataKey"
++		    log::trace("{} 0x3f chunk (LevelChunkMetaDataKey)", dimName);
++		    // cdata contains a key to the NBT data that's in the global LevelChunkMetaDataDictionary
++                    if (control.verboseFlag) {
++                        printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
++                    }
++		case 0x40:
++                    log::trace("{} 0x40 chunk", dimName);
++                    if (control.verboseFlag) {
++                        printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
++                    }
++		    break;
++		case 0x41:
++                    log::trace("{} 0x41 chunk", dimName);
++                    if (control.verboseFlag) {
++                        printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
++                    }
++		    break;
+                 case 0x2C:
+                 case 0x76:
+                     // "Version"
+@@ -813,7 +839,7 @@ namespace mcpe_viz
+                     // chunk block data - 10241 bytes
+                     // todonow -- but have also seen 6145 on v1.1?
+                     // we do the parsing in the destination object to save memcpy's
+-                    // todonow - would be better to get the version # from the proper chunk record (0x76)
++                    // todonow - would be better to get the version # from the proper chunk record (0x2C)
+                 {
+                     int32_t chunkY = chunkTypeSub;
+                     // check the first byte to see if anything interesting is in it
+
+From aa3727b91a9099f74d574c856c1fbc05ddc5bda7 Mon Sep 17 00:00:00 2001
+From: Tim Nowaczyk <zimage@gmail.com>
+Date: Wed, 9 Aug 2023 10:09:28 -0400
+Subject: [PATCH 3/5] Added more logging and a few more stubs
+
+---
+ src/world/world.cc | 43 +++++++++++++++++++++++++++++--------------
+ 1 file changed, 29 insertions(+), 14 deletions(-)
+
+diff --git a/src/world/world.cc b/src/world/world.cc
+index be381e8..7b7c34f 100644
+--- a/src/world/world.cc
++++ b/src/world/world.cc
+@@ -665,6 +665,7 @@ namespace mcpe_viz
+                 switch (chunkType) {
+                 case 0x30:
+                     // "LegacyTerrain"
++                    log::trace("{} 0x30 chunk (LegacyTerrain):", dimName);
+                     // chunk block data
+                     // we do the parsing in the destination object to save memcpy's
+                     // todonow - would be better to get the version # from the proper chunk record (0x76)
+@@ -674,7 +675,7 @@ namespace mcpe_viz
+                 case 0x31:
+                     // "BlockEntity"
+                     // tile entity record (e.g. a chest)
+-                    log::trace("{} 0x31 chunk (tile entity data):", dimName);
++                    log::trace("{} 0x31 chunk (BlockEntity):", dimName);
+                     ret = parseNbt("0x31-te: ", cdata, int32_t(cdata_size), tagList);
+                     if (ret == 0) {
+                         parseNbt_tileEntity(chunkDimId, dimName + "-", tagList);
+@@ -684,7 +685,7 @@ namespace mcpe_viz
+                 case 0x32:
+                     // "Entity"
+                     // entity record (e.g. a mob)
+-                    log::trace("{} 0x32 chunk (entity data):", dimName);
++                    log::trace("{} 0x32 chunk (Entity):", dimName);
+                     ret = parseNbt("0x32-e: ", cdata, int32_t(cdata_size), tagList);
+                     if (ret == 0) {
+                         parseNbt_entity(chunkDimId, dimName + "-", tagList, false, false, "", "");
+@@ -695,16 +696,15 @@ namespace mcpe_viz
+                     // "PendingTicks"
+                     // todo - this appears to be info on blocks that can move: water + lava + fire + sand + gravel
+                     // todo - new nether has slowed things down quite a bit
+-                    log::trace("{} 0x33 chunk (tick-list):", dimName);
++                    log::trace("{} 0x33 chunk (PendingTicks):", dimName);
+                     //parseNbt("0x33-tick: ", cdata, int32_t(cdata_size), tagList);
+                     // todo - parse tagList?
+                     // todobig - could show location of active fires
+                     break;
+ 
+                 case 0x34:
+-                    // "BlockExtraData"
+-                    log::trace("{} 0x34 chunk (TODO - MYSTERY RECORD - BlockExtraData)",
+-                        dimName.c_str());
++                    // "LegacyBlockExtraData"
++                    log::trace("{} 0x34 chunk (LegacyBlockExtraData)", dimName);
+                     if (control.verboseFlag) {
+                         printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
+                     }
+@@ -734,7 +734,6 @@ namespace mcpe_viz
+                       cat (logfile) | grep "WARNING: Unknown key size" | grep " 35\]" | cut -b75- | sort | nl
+                     */
+                     break;
+-
+                 case 0x36:
+ 		    // "FinalizedState"
+                     log::trace("{} 0x36 chunk (FinalizedState)", dimName);
+@@ -746,7 +745,12 @@ namespace mcpe_viz
+                     // 1 NeedsPopulation Chunk needs to be populated with mobs
+                     // 2 Done Chunk generation is fully complete
+                     break;
+-
++                case 0x37:
++                    log::trace("{} 0x37 chunk (ConversionData)", dimName);
++		    break;
++                case 0x38:
++                    log::trace("{} 0x38 chunk (BorderBlocks)", dimName);
++		    break;
+                 case 0x39:
+ 		    // "HardCodedSpawnAreas"
+                     // Bounding boxes for structure spawns stored in binary format
+@@ -780,28 +784,36 @@ namespace mcpe_viz
+                 case 0x3b:
+                     // Appears to be a list of checksums for chunk data. Upcoming in 1.16
+ 		    // Appears to be no longer written as of 1.18 -- https://minecraft.fandom.com/wiki/Bedrock_Edition_level_format#Chunk_key_format
+-                    log::trace("{} 0x3b chunk (checksum?)", dimName);
++                    log::trace("{} 0x3b chunk (CheckSums)", dimName);
+                     if (control.verboseFlag) {
+                         printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
+                     }
+                     // todo - what is this?
+                     break;
+-
++                case 0x3c:
++                    log::trace("{} 0x3c chunk (GenerationSeed)", dimName);
++		    break;
++                case 0x3d:
++                    log::trace("{} 0x3d chunk (GeneratedPreCavesAndCliffsBlending)", dimName);
++		    break;
++                case 0x3e:
++                    log::trace("{} 0x3c chunk (BlendingBiomeHeight)", dimName);
++		    break;
+ 		case 0x3f:
+-		    // "LevelChunkMetaDataKey"
+-		    log::trace("{} 0x3f chunk (LevelChunkMetaDataKey)", dimName);
++		    // MetaDataHash
++		    log::trace("{} 0x3f chunk (MetaDataHash)", dimName);
+ 		    // cdata contains a key to the NBT data that's in the global LevelChunkMetaDataDictionary
+                     if (control.verboseFlag) {
+                         printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
+                     }
+ 		case 0x40:
+-                    log::trace("{} 0x40 chunk", dimName);
++                    log::trace("{} 0x40 chunk (BlendingData)", dimName);
+                     if (control.verboseFlag) {
+                         printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
+                     }
+ 		    break;
+ 		case 0x41:
+-                    log::trace("{} 0x41 chunk", dimName);
++                    log::trace("{} 0x41 chunk (ActorDigestVersion)", dimName);
+                     if (control.verboseFlag) {
+                         printKeyValue(key, int32_t(key_size), cdata, int32_t(cdata_size), false);
+                     }
+@@ -868,11 +880,13 @@ namespace mcpe_viz
+ 
+                     // todonow - would be better to get the version # from the proper chunk record (0x76)
+                 {
++                    log::trace("{} 0x2d chunk (Data2D)", dimName);
+                     dimDataList[chunkDimId]->addChunkColumnData(3, chunkX, chunkZ, cdata, int32_t(cdata_size));
+                 }
+                 break;
+ 
+                 case 0x2b:
++		    // "Data3D"
+                     // 1.18 3D biome data
+                     // 512 bytes -> heightmap
+                     // Paletted biome data per subcunk (16x16x16) from bottom up
+@@ -883,6 +897,7 @@ namespace mcpe_viz
+                     //   int32 palette length
+                     //   palette entries (int32)
+                 {
++                    log::trace("{} 0x2b chunk (Data3D)", dimName);
+                     dimDataList[chunkDimId]->addChunkColumnData(4, chunkX, chunkZ, cdata, int32_t(cdata_size));
+                 }
+                 break;
+
+From 281821a12c3b93ab8cdc2e19945e08c2686fcab4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alex=20Benn=C3=A9e?= <alex.bennee@linaro.org>
+Date: Tue, 14 Nov 2023 14:28:13 +0000
+Subject: [PATCH 4/5] src/world: fix buffer overflow parsing VILLAGE tags
+
+Evidently the VILLAGE tag has changed in later versions of Bedrock to
+include more information before the unique VID. Make the code more
+secure by searching backwards for the "_" delimiters and only copying
+the villiger ID if it contains the key. Avoid the additional copy of
+rectype by checking for INFO directly from the found delimiter.
+
+By correctly parsing these new villager tags we also need to extend
+the villager parsing code to check for errors and try the two forms of
+the key I've seen (there may be more). It is a fairly clunkly solution
+but should prevent future breakage.
+---
+ src/world/world.cc | 55 +++++++++++++++++++++++++++++-----------------
+ 1 file changed, 35 insertions(+), 20 deletions(-)
+
+diff --git a/src/world/world.cc b/src/world/world.cc
+index 7b7c34f..04a8132 100644
+--- a/src/world/world.cc
++++ b/src/world/world.cc
+@@ -443,15 +443,22 @@ namespace mcpe_viz
+                 }
+             }
+             else if (strncmp(key, "VILLAGE_", 8) == 0) {
++                // Extract the unique 36 VID from the key in the form off:
+                 // VILLAGE_07315855-d0e6-4fac-8b20-0c07cfad3d29_POI
+-                char vid[37];
+-                char rectype[9];
+-                memcpy(vid, key + 8, 36);
+-                vid[36] = '\0';
+-                memcpy(rectype, key+45, key_size-45);
+-                rectype[key_size-45] = '\0';
+-                if (strncmp(rectype, "INFO", 5) == 0) {
+-                    villages.push_back(vid);
++                // VILLAGE_Overworld_4faa34eb-af26-4a63-9251-851069a53573_DWELLERS\001\330b\a\006
++                std::string keyStr(key, key_size);
++                size_t last = keyStr.rfind("_");
++                size_t secondLast = std::string::npos;
++                if (last != std::string::npos) {
++                    secondLast = keyStr.rfind("_", last - 1);
++                }
++                if (last - secondLast == 37) {
++                    char vid[37];
++                    strncpy(vid, keyStr.data() + secondLast + 1, 36);
++                    vid[36] = '\0';
++                    if (strncmp(key + last + 1, "INFO", 4) == 0) {
++                        villages.push_back(vid);
++                    }
+                 }
+             }
+             else if (strncmp(key, "game_flatworldlayers", key_size) == 0) {
+@@ -974,18 +981,26 @@ namespace mcpe_viz
+         for (auto vid : villages) {
+             std::string data;
+             MyNbtTagList info_tags, player_tags, dweller_tags, poi_tags;
+-            db->Get(levelDbReadOptions, ("VILLAGE_" + vid + "_INFO"), &data);
+-            ret = parseNbt("village_info: ", data.data(), data.size(), info_tags);
+-            if (ret != 0) continue;
+-            db->Get(levelDbReadOptions, ("VILLAGE_" + vid + "_PLAYERS"), &data);
+-            ret = parseNbt("village_players: ", data.data(), data.size(), player_tags);
+-            if (ret != 0) continue;
+-            db->Get(levelDbReadOptions, ("VILLAGE_" + vid + "_DWELLERS"), &data);
+-            ret = parseNbt("village_dwellers: ", data.data(), data.size(), dweller_tags);
+-            if (ret != 0) continue;
+-            db->Get(levelDbReadOptions, ("VILLAGE_" + vid + "_POI"), &data);
+-            ret = parseNbt("village_poi: ", data.data(), data.size(), poi_tags);
+-            if (ret != 0) continue;
++            if (db->Get(levelDbReadOptions, ("VILLAGE_" + vid + "_INFO"), &data).ok() ||
++                db->Get(levelDbReadOptions, ("VILLAGE_Overworld_" + vid + "_INFO"), &data).ok() ) {
++                ret = parseNbt("village_info: ", data.data(), data.size(), info_tags);
++                if (ret != 0) continue;
++            }
++            if (db->Get(levelDbReadOptions, ("VILLAGE_" + vid + "_PLAYERS"), &data).ok() ||
++                db->Get(levelDbReadOptions, ("VILLAGE_Overworld_" + vid + "_PLAYERS"), &data).ok()) {
++                ret = parseNbt("village_players: ", data.data(), data.size(), player_tags);
++                if (ret != 0) continue;
++            }
++            if (db->Get(levelDbReadOptions, ("VILLAGE_" + vid + "_DWELLERS"), &data).ok() ||
++                db->Get(levelDbReadOptions, ("VILLAGE_Overworld_" + vid + "_DWELLERS"), &data).ok()) {
++                ret = parseNbt("village_dwellers: ", data.data(), data.size(), dweller_tags);
++                if (ret != 0) continue;
++            }
++            if (db->Get(levelDbReadOptions, ("VILLAGE_" + vid + "_POI"), &data).ok() ||
++                db->Get(levelDbReadOptions, ("VILLAGE_Overworld_" + vid + "_POI"), &data).ok()) {
++                ret = parseNbt("village_poi: ", data.data(), data.size(), poi_tags);
++                if (ret != 0) continue;
++            }
+ 
+             parseNbt_village(info_tags, player_tags, dweller_tags, poi_tags, playerMap);
+         }
+
+From 440c9ebf9eb21b1163db8726cc102df62f9b5737 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alex=20Benn=C3=A9e?= <alex.bennee@linaro.org>
+Date: Tue, 14 Nov 2023 17:24:51 +0000
+Subject: [PATCH 5/5] github: update workflow to use 22.04
+
+My build works fine on the current Debian and Ubuntu machines. Rather
+than figure out what is broken on the older Ubuntu bump to the current
+LTS.
+---
+ .github/workflows/pipeline.yml | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/.github/workflows/pipeline.yml b/.github/workflows/pipeline.yml
+index f844708..96fbf50 100644
+--- a/.github/workflows/pipeline.yml
++++ b/.github/workflows/pipeline.yml
+@@ -8,7 +8,7 @@ on:
+ 
+ jobs:
+   Ubuntu:
+-    runs-on: ubuntu-20.04
++    runs-on: ubuntu-22.04
+ 
+     steps:
+     - uses: actions/checkout@v2
+@@ -18,7 +18,7 @@ jobs:
+     - name: Install requirements
+       run: |
+         sudo -E apt-get -qq update
+-        sudo -E apt-get -qq install python3 libpng++-dev zlib1g-dev g++-8 libboost-program-options-dev wget lcov libjson-perl libperlio-gzip-perl
++        sudo -E apt-get -qq install python3 libpng++-dev zlib1g-dev g++ libstdc++-11-dev libboost-program-options-dev wget lcov libjson-perl libperlio-gzip-perl
+         g++ --version
+         gcov --version
+     
