@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 AS builder
+FROM ubuntu:24.04 AS builder
 
 # hadolint ignore=DL3015
 RUN apt-get update && apt-get install -y git\
@@ -16,7 +16,7 @@ RUN git clone --recursive https://github.com/bedrock-viz/bedrock-viz.git && \
     mkdir build && cd build && \
     cmake .. && make install
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 RUN apt-get update && apt-get install --no-install-recommends -y mosquitto-clients \
     rsync openssh-client jq unzip \
  && apt-get clean \
